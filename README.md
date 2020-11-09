@@ -5,6 +5,8 @@ An api to send secret key and the data, and response is md5 sum for the data sen
 ## APIs 
 
 - /api/userdata/insert/ : return md5 hash of the data stored. Also saves to files folder.
+- /api/userdata/testing/ : return md5 hash of the data sent. 
+
 
 
 ## To run
