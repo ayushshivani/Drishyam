@@ -31,18 +31,41 @@ A quick introduction and working of all the parts with demo videos available bel
 
 ### Generating RSA Keys 
 
-- 
+- This sub system helps in generating of the RSA key pair which help in keeping the user identity annonimised.
+- The Code and the corresonding readme can be found [here](https://github.com/ayushshivani/MD5_Generation/tree/main/rsa_key_pair_generation).
 
-## APIs 
+[DEMO VIDEO](https://www.youtube.com/watch?v=g8GoDeEph7U&list=PLibW_SCiVev2NjuWV8NMWwCrR3oeFGwLB&index=1)
 
-- /api/userdata/insert/ : return md5 hash of the data stored. Also saves to files folder.
-- /api/userdata/testing/ : return md5 hash of the data sent. 
+### APIs ( Django App ) 
 
-## To run
+- This sub system helps in getting data from users and hashing the data. It is also used by third party to check the authenticity of the data at the stage when they want to verify it.
+
+- It contains the the following APIs:
+    
+    - /api/userdata/insert/ : return md5 hash of the data stored. Also saves to files folder.
+    - /api/userdata/testing/ : return md5 hash of the data sent. 
+
+#### To run
 
 - cd django_app
 - python manage.py runserver
 
-## To check the code 
+#### To check the code 
 
 - UserDataEntry in user_data/views.py
+
+[DEMO VIDEO](https://www.youtube.com/watch?v=-lCoHOrTOns&list=PLibW_SCiVev2NjuWV8NMWwCrR3oeFGwLB&index=2)
+
+
+### BlockChain Server
+
+[DEMO VIDEO](https://www.youtube.com/watch?v=-lCoHOrTOns&list=PLibW_SCiVev2NjuWV8NMWwCrR3oeFGwLB&index=2)
+
+### Zero Knowledge Proofs
+
+
+## Authors
+
+- Ayush Shivani
+- Anurag Jain
+- Shaunak Badani
