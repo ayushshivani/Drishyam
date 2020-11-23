@@ -22,10 +22,15 @@ A quick introduction and working of all the parts with demo videos available bel
 
 - Whenever the data is changed and hence commited, the hash is different which helps us identify if there was any tampering with the data.
 
-- **TODO** how ZKP comes into the play?
-
 - If some external agency wants to verify the ingrety of the data, the get simply call an api which returns hash of the data and can check it with the hash on the blockchain server, if the hash maps the data is tampered free else not.
 
+### Zero Knowledge Proof based Identity Management System
+
+Zero Knowledge proofs ensure we can verify the validity of the test subjects without needing to compromise the privacy of the test subjects. 
+
+### Homomorphic Encryption
+
+Homomorphic Encryption can allow us to verify the validity of data without revealing the data itself!
 
 ## SubSystems
 
