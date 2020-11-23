@@ -2,15 +2,15 @@ import ast
 if 'arg' not in dir(ast):
     ast.arg = type(None)
 
-def parse(code):
+def parser(code):
     return ast.parse(code).body
 
-def extract_inputs_and_body(code):
+def extio(code):
     o = []
     if len(code) != 1 :
-        raise Exception("Expecting function declaration")
+        raise Exception("function not declaration")
     if not isinstance(code[0], ast.FunctionDef):
-        raise Exception("Expecting function declaration")
+        raise Exception("function not declaration")
     inputs = []
     for arg in code[0].args.args:
         if isinstance(arg, ast.arg):
@@ -33,10 +33,10 @@ def extract_inputs_and_body(code):
     return inputs, body
 
 
-def flatten_body(body):
+def bd_flat(body):
     o = []
     for c in body:
-        o.extend(flatten_stmt(c))
+        o.extend(stmt_flat(c))
     return o
 
 next_symbol = [0]
@@ -45,15 +45,15 @@ def mksymbol():
     return 'sym_'+str(next_symbol[0])
 
 
-def flatten_stmt(stmt):
+def stmt_flat(stmt):
     if isinstance(stmt, ast.Assign):
         assert len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name)
         target = stmt.targets[0].id
     elif isinstance(stmt, ast.Return):
         target = '~out'
-    return flatten_expr(target, stmt.value)
+    return exp_flat(target, stmt.value)
 
-def flatten_expr(target, expr):
+def exp_flat(target, expr):
     if isinstance(expr, ast.Name):
         return [['set', target, expr.id]]
     elif isinstance(expr, ast.Num):
@@ -72,14 +72,14 @@ def flatten_expr(target, expr):
             if expr.right.n == 0:
                 return [['set', target, 1]]
             elif expr.right.n == 1:
-                return flatten_expr(target, expr.left)
+                return exp_flat(target, expr.left)
             else: 
                 if isinstance(expr.left, (ast.Name, ast.Num)):
                     nxt = base = expr.left.id if isinstance(expr.left, ast.Name) else expr.left.n
                     o = []
                 else:
                     nxt = base = mksymbol()
-                    o = flatten_expr(base, expr.left)
+                    o = exp_flat(base, expr.left)
                 for i in range(1, expr.right.n):
                     latest = nxt
                     nxt = target if i == expr.right.n - 1 else mksymbol()
@@ -92,18 +92,18 @@ def flatten_expr(target, expr):
             sub1 = []
         else:
             var1 = mksymbol()
-            sub1 = flatten_expr(var1, expr.left)
+            sub1 = exp_flat(var1, expr.left)
         if isinstance(expr.right, (ast.Name, ast.Num)):
             var2 = expr.right.id if isinstance(expr.right, ast.Name) else expr.right.n
             sub2 = []
         else:
             var2 = mksymbol()
-            sub2 = flatten_expr(var2, expr.right)
+            sub2 = exp_flat(var2, expr.right)
         return sub1 + sub2 + [[op, target, var1, var2]]
     else:
         raise Exception("Unexpected statement value: %r" % stmt.value)
 
-def insert_var(arr, varz, var, used, reverse=False):
+def intvar(arr, varz, var, used, reverse=False):
     if isinstance(var, str):
         if var not in used:
             raise Exception("Using a variable before it is set!")
@@ -111,12 +111,12 @@ def insert_var(arr, varz, var, used, reverse=False):
     elif isinstance(var, int):
         arr[0] += var * (-1 if reverse else 1)
 
-def get_var_placement(inputs, flatcode):
+def gvplace(inputs, flatcode):
     return ['~one'] + [x for x in inputs] + ['~out'] + [c[1] for c in flatcode if c[1] not in inputs and c[1] != '~out']
     
 
-def flatcode_to_r1cs(inputs, flatcode):
-    varz = get_var_placement(inputs, flatcode)
+def ftcs(inputs, flatcode):
+    varz = gvplace(inputs, flatcode)
     A, B, C = [], [], []
     used = {i: True for i in inputs}
     for x in flatcode:
@@ -126,27 +126,27 @@ def flatcode_to_r1cs(inputs, flatcode):
         used[x[1]] = True
         if x[0] == 'set':
             a[varz.index(x[1])] += 1
-            insert_var(a, varz, x[2], used, reverse=True)
+            intvar(a, varz, x[2], used, reverse=True)
             b[0] = 1
         elif x[0] == '+' or x[0] == '-':
             c[varz.index(x[1])] = 1
-            insert_var(a, varz, x[2], used)
-            insert_var(a, varz, x[3], used, reverse=(x[0] == '-'))
+            intvar(a, varz, x[2], used)
+            intvar(a, varz, x[3], used, reverse=(x[0] == '-'))
             b[0] = 1
         elif x[0] == '*':
             c[varz.index(x[1])] = 1
-            insert_var(a, varz, x[2], used)
-            insert_var(b, varz, x[3], used)
+            intvar(a, varz, x[2], used)
+            intvar(b, varz, x[3], used)
         elif x[0] == '/':
-            insert_var(c, varz, x[2], used)
+            intvar(c, varz, x[2], used)
             a[varz.index(x[1])] = 1
-            insert_var(b, varz, x[3], used)
+            intvar(b, varz, x[3], used)
         A.append(a)
         B.append(b)
         C.append(c)
     return A, B, C
 
-def grab_var(varz, assignment, var):
+def gv(varz, assignment, var):
     if isinstance(var, str):
         return assignment[varz.index(var)]
     elif isinstance(var, int):
@@ -154,42 +154,42 @@ def grab_var(varz, assignment, var):
     else:
         raise Exception("What kind of expression is this? %r" % var)
 
-def assign_variables(inputs, input_vars, flatcode):
-    varz = get_var_placement(inputs, flatcode)
+def ass_var(inputs, input_vars, flatcode):
+    varz = gvplace(inputs, flatcode)
     assignment = [0] * len(varz)
     assignment[0] = 1
     for i, inp in enumerate(input_vars):
         assignment[i + 1] = inp
     for x in flatcode:
         if x[0] == 'set':
-            assignment[varz.index(x[1])] = grab_var(varz, assignment, x[2])
+            assignment[varz.index(x[1])] = gv(varz, assignment, x[2])
         elif x[0] == '+':
-            assignment[varz.index(x[1])] = grab_var(varz, assignment, x[2]) + grab_var(varz, assignment, x[3])
+            assignment[varz.index(x[1])] = gv(varz, assignment, x[2]) + gv(varz, assignment, x[3])
         elif x[0] == '-':
-            assignment[varz.index(x[1])] = grab_var(varz, assignment, x[2]) - grab_var(varz, assignment, x[3])
+            assignment[varz.index(x[1])] = gv(varz, assignment, x[2]) - gv(varz, assignment, x[3])
         elif x[0] == '*':
-            assignment[varz.index(x[1])] = grab_var(varz, assignment, x[2]) * grab_var(varz, assignment, x[3])
+            assignment[varz.index(x[1])] = gv(varz, assignment, x[2]) * gv(varz, assignment, x[3])
         elif x[0] == '/':
-            assignment[varz.index(x[1])] = grab_var(varz, assignment, x[2]) / grab_var(varz, assignment, x[3])
+            assignment[varz.index(x[1])] = gv(varz, assignment, x[2]) / gv(varz, assignment, x[3])
     return assignment
                 
 
-def code_to_r1cs_with_inputs(code, input_vars):
-    inputs, body = extract_inputs_and_body(parse(code))
+def ctrvi(code, input_vars):
+    inputs, body = extio (parser(code))
     print( 'Inputs')
     print( inputs)
     print( 'Body')
     print( body)
-    flatcode = flatten_body(body)
+    flatcode = bd_flat(body)
     print( 'Flatcode')
     print( flatcode)
     print( 'Input var assignment')
-    print( get_var_placement(inputs, flatcode))
-    A, B, C = flatcode_to_r1cs(inputs, flatcode)
-    r = assign_variables(inputs, input_vars, flatcode)
+    print( gvplace(inputs, flatcode))
+    A, B, C = ftcs(inputs, flatcode)
+    r = ass_var(inputs, input_vars, flatcode)
     return r, A, B, C
 
-r, A, B, C = code_to_r1cs_with_inputs("""
+r, A, B, C = ctrvi("""
 def qeval(x):
     y = x**2
     return y + x + 3
@@ -197,8 +197,11 @@ def qeval(x):
 print( 'r')
 print( r)
 print( 'A')
-for x in A: print( x)
+for x in A:
+    print( x)
 print( 'B')
-for x in B: print( x)
+for x in B: 
+    print( x)
 print( 'C')
-for x in C: print( x)
+for x in C: 
+    print( x)
